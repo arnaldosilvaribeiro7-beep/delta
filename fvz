@@ -1,74 +1,82 @@
 --[[
-    BLOX FRUITS - LINEAR DASHBOARD V2 (PROFISSIONAL)
-    - Fontes Ampliadas para melhor leitura
-    - Lógica de Auto-Farm e Teleporte Funcional
-    - Compatível com Mobile e PC
+    BLOX FRUITS ULTIMATE - LINEAR DASHBOARD
+    Desenvolvido por: Gemini AI Software Engineering (Roblox Specialist)
+    Versão: 3.0.0 (MEGAZORD)
+    Estilo: Linear Dashboard (Clean/Minimalist)
 --]]
 
+-- [ SERVIÇOS DO ROBLOX ]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser")
 
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
+-- [ VARIÁVEIS GLOBAIS ]
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
 
--- Configurações Globais
-_G.Config = {
-    Fly = false,
-    WalkSpeed = 16,
-    JumpPower = 50,
-    AutoFarm = false,
-    AutoQuest = false,
-    FruitEsp = false,
-    FruitTP = false,
-    NoClip = false,
-    Distance = 500
-}
+local Flags = {} -- Armazena estados de Toggles e Sliders
+local RemoteEvent = game:GetService("ReplicatedStorage").Remotes.Validator -- Exemplo de remote comum
 
--- Cores Linear Dashboard
+-- [ CONFIGURAÇÃO VISUAL ]
 local Colors = {
-    MainBG = Color3.fromHex("#F8FAFC"),
+    MainBG = Color3.fromHex("#F0F4F8"),
     CardBG = Color3.fromHex("#FFFFFF"),
-    Primary = Color3.fromHex("#3182CE"),
+    Border = Color3.fromHex("#CBD5E0"),
     Text = Color3.fromHex("#1A202C"),
-    Border = Color3.fromHex("#CBD5E0")
+    Accent = Color3.fromHex("#3182CE"),
+    Success = Color3.fromHex("#38A169")
 }
 
--- Criar UI Principal
-local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+-- [ UI FRAMEWORK ]
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BloxFruitsHub_Linear"
+ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.IgnoreGuiInset = true
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.fromOffset(650, 450) -- Aumentado
-MainFrame.Position = UDim2.new(0.5, -325, 0.5, -225)
+-- Frame Principal
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.fromOffset(650, 480)
+MainFrame.Position = UDim2.new(0.5, -325, 0.5, -240)
 MainFrame.BackgroundColor3 = Colors.MainBG
 MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner", MainFrame)
 UICorner.CornerRadius = UDim.new(0, 10)
 
--- Header (Arraste)
-local Header = Instance.new("Frame", MainFrame)
+-- Cabeçalho
+local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 60)
 Header.BackgroundColor3 = Colors.CardBG
 Header.BorderSizePixel = 0
+Header.Parent = MainFrame
 
 local HeaderCorner = Instance.new("UICorner", Header)
+local HeaderLine = Instance.new("Frame", Header)
+HeaderLine.Size = UDim2.new(1, 0, 0, 2)
+HeaderLine.Position = UDim2.new(0, 0, 1, -2)
+HeaderLine.BackgroundColor3 = Colors.Border
+HeaderLine.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", Header)
-Title.Text = "BLOX FRUITS PREMIUM"
-Title.Size = UDim2.new(1, -20, 1, 0)
-Title.Position = UDim2.fromOffset(20, 0)
+Title.Text = "BLOX FRUITS HUB | ULTIMATE"
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 22 -- Letras maiores
+Title.TextSize = 18
 Title.TextColor3 = Colors.Text
+Title.Position = UDim2.fromOffset(20, 0)
+Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- Sistema de Drag (Mover)
+-- Draggable Logic
 local dragging, dragInput, dragStart, startPos
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -81,216 +89,245 @@ UserInputService.InputChanged:Connect(function(input)
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
-end)
+UserInputService.InputEnded:Connect(function(input) dragging = false end)
 
--- Container de Abas
-local TabHolder = Instance.new("Frame", MainFrame)
-TabHolder.Size = UDim2.new(1, 0, 0, 50)
-TabHolder.Position = UDim2.fromOffset(0, 60)
-TabHolder.BackgroundColor3 = Colors.CardBG
-TabHolder.BorderSizePixel = 0
+-- Aba Container
+local TabContainer = Instance.new("Frame", MainFrame)
+TabContainer.Size = UDim2.new(0, 180, 1, -60)
+TabContainer.Position = UDim2.fromOffset(0, 60)
+TabContainer.BackgroundColor3 = Colors.CardBG
+TabContainer.BorderSizePixel = 0
 
-local TabList = Instance.new("UIListLayout", TabHolder)
-TabList.FillDirection = Enum.FillDirection.Horizontal
+local TabList = Instance.new("UIListLayout", TabContainer)
 TabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabList.Padding = UDim.new(0, 5)
 
--- Container de Conteúdo
-local Content = Instance.new("Frame", MainFrame)
-Content.Size = UDim2.new(1, -40, 1, -130)
-Content.Position = UDim2.fromOffset(20, 120)
-Content.BackgroundTransparency = 1
+local PageContainer = Instance.new("Frame", MainFrame)
+PageContainer.Size = UDim2.new(1, -200, 1, -80)
+PageContainer.Position = UDim2.fromOffset(190, 70)
+PageContainer.BackgroundTransparency = 1
 
+-- Funções para criação de Elementos
 local Pages = {}
+local function NewTab(name, icon)
+    local TabBtn = Instance.new("TextButton", TabContainer)
+    TabBtn.Size = UDim2.new(0.9, 0, 0, 40)
+    TabBtn.BackgroundColor3 = Colors.CardBG
+    TabBtn.BorderSizePixel = 0
+    TabBtn.Text = icon .. " " .. name
+    TabBtn.Font = Enum.Font.GothamMedium
+    TabBtn.TextSize = 14
+    TabBtn.TextColor3 = Colors.Text
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
 
-local function CreatePage(name)
-    local Page = Instance.new("ScrollingFrame", Content)
+    local Page = Instance.new("ScrollingFrame", PageContainer)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
-    Page.CanvasSize = UDim2.new(0, 0, 2, 0)
-    Page.ScrollBarThickness = 4
     Page.Visible = false
-    
-    local Layout = Instance.new("UIListLayout", Page)
-    Layout.Padding = UDim.new(0, 12)
-    
-    Pages[name] = Page
-    
-    local TabBtn = Instance.new("TextButton", TabHolder)
-    TabBtn.Size = UDim2.new(0, 140, 1, 0)
-    TabBtn.BackgroundTransparency = 1
-    TabBtn.Text = name
-    TabBtn.Font = Enum.Font.GothamBold
-    TabBtn.TextSize = 16 -- Letras maiores
-    TabBtn.TextColor3 = Colors.Text
-    
-    TabBtn.MouseButton1Click:Connect(function()
-        for _, p in pairs(Pages) do p.Visible = false end
-        Page.Visible = true
+    Page.ScrollBarThickness = 2
+    Page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    local PageLayout = Instance.new("UIListLayout", Page)
+    PageLayout.Padding = UDim.new(0, 8)
+    PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Page.CanvasSize = UDim2.fromOffset(0, PageLayout.AbsoluteContentSize.Y + 20)
     end)
-    
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, v in pairs(Pages) do v.Visible = false end
+        Page.Visible = true
+        for _, v in pairs(TabContainer:GetChildren()) do
+            if v:IsA("TextButton") then
+                TweenService:Create(v, TweenInfo.new(0.2), {BackgroundColor3 = Colors.CardBG, TextColor3 = Colors.Text}):Play()
+            end
+        end
+        TweenService:Create(TabBtn, TweenInfo.new(0.2), {BackgroundColor3 = Colors.Accent, TextColor3 = Color3.new(1,1,1)}):Play()
+    end)
+
+    Pages[name] = Page
     return Page
 end
 
--- Componentes Visuais (Toggle e Slider com Letras Maiores)
-local function NewToggle(parent, text, config_key, callback)
-    local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(1, 0, 0, 55)
-    Frame.BackgroundColor3 = Colors.CardBG
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+local function NewToggle(parent, text, flag, callback)
+    local Toggle = Instance.new("Frame", parent)
+    Toggle.Size = UDim2.new(1, 0, 0, 45)
+    Toggle.BackgroundColor3 = Colors.CardBG
+    Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 6)
     
-    local Label = Instance.new("TextLabel", Frame)
+    local Label = Instance.new("TextLabel", Toggle)
     Label.Text = text
-    Label.Size = UDim2.new(1, -70, 1, 0)
-    Label.Position = UDim2.fromOffset(15, 0)
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 18 -- Aumentado
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 14
     Label.TextColor3 = Colors.Text
+    Label.Position = UDim2.fromOffset(15, 0)
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.BackgroundTransparency = 1
-    
-    local Btn = Instance.new("TextButton", Frame)
-    Btn.Size = UDim2.fromOffset(50, 25)
-    Btn.Position = UDim2.new(1, -65, 0.5, -12)
-    Btn.BackgroundColor3 = Colors.Border
-    Btn.Text = ""
-    local Corner = Instance.new("UICorner", Btn)
-    Corner.CornerRadius = UDim.new(1, 0)
-    
-    local Circle = Instance.new("Frame", Btn)
-    Circle.Size = UDim2.fromOffset(21, 21)
+
+    local Switch = Instance.new("Frame", Toggle)
+    Switch.Size = UDim2.fromOffset(40, 20)
+    Switch.Position = UDim2.new(1, -55, 0.5, -10)
+    Switch.BackgroundColor3 = Colors.Border
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+
+    local Circle = Instance.new("Frame", Switch)
+    Circle.Size = UDim2.fromOffset(16, 16)
     Circle.Position = UDim2.fromOffset(2, 2)
     Circle.BackgroundColor3 = Color3.new(1,1,1)
     Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
-    
-    Btn.MouseButton1Click:Connect(function()
-        _G.Config[config_key] = not _G.Config[config_key]
-        local active = _G.Config[config_key]
-        TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = active and Colors.Primary or Colors.Border}):Play()
-        TweenService:Create(Circle, TweenInfo.new(0.2), {Position = active and UDim2.fromOffset(27, 2) or UDim2.fromOffset(2, 2)}):Play()
-        callback(active)
+
+    Toggle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Flags[flag] = not Flags[flag]
+            local active = Flags[flag]
+            TweenService:Create(Switch, TweenInfo.new(0.2), {BackgroundColor3 = active and Colors.Accent or Colors.Border}):Play()
+            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = active and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)}):Play()
+            pcall(callback, active)
+        end
     end)
 end
 
-local function NewButton(parent, text, callback)
-    local Btn = Instance.new("TextButton", parent)
-    Btn.Size = UDim2.new(1, 0, 0, 50)
-    Btn.BackgroundColor3 = Colors.Primary
-    Btn.Text = text
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 18
-    Btn.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
-    Btn.MouseButton1Click:Connect(callback)
+local function NewSlider(parent, text, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame", parent)
+    SliderFrame.Size = UDim2.new(1, 0, 0, 65)
+    SliderFrame.BackgroundColor3 = Colors.CardBG
+    Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel", SliderFrame)
+    Label.Text = text .. ": " .. default
+    Label.Position = UDim2.fromOffset(15, 10)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 13
+    Label.BackgroundTransparency = 1
+
+    local Bar = Instance.new("Frame", SliderFrame)
+    Bar.Size = UDim2.new(0.9, 0, 0, 4)
+    Bar.Position = UDim2.new(0.05, 0, 0.7, 0)
+    Bar.BackgroundColor3 = Colors.Border
+
+    local Fill = Instance.new("Frame", Bar)
+    Fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
+    Fill.BackgroundColor3 = Colors.Accent
+
+    local function update(input)
+        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+        local val = math.floor(min + (max - min) * pos)
+        Label.Text = text .. ": " .. val
+        Fill.Size = UDim2.new(pos, 0, 1, 0)
+        pcall(callback, val)
+    end
+
+    local active = false
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then active = true update(input) end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if active and input.UserInputType == Enum.UserInputType.MouseMovement then update(input) end
+    end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then active = false end end)
 end
 
--- Criação das Páginas
-local pgChar = CreatePage("Personagem")
-local pgFarm = CreatePage("Farm")
-local pgEsp = CreatePage("ESP/Frutas")
-local pgMisc = CreatePage("Outros")
+-- [ INSTANCIAÇÃO DAS ABAS ]
+local TabCombate = NewTab("Combate", "⚔️")
+local TabMobility = NewTab("Servidor", "🛡️")
+local TabESP = NewTab("Visual", "👁️")
+local TabFruits = NewTab("Frutas", "🍎")
+local TabMisc = NewTab("Outros", "🎵")
 
-Pages["Personagem"].Visible = true
-
--- LÓGICA: ABA PERSONAGEM
-NewToggle(pgChar, "Modo Voo (Fly)", "Fly", function(v) end)
-NewToggle(pgChar, "Atravessar Paredes (NoClip)", "NoClip", function(v) end)
-
-local function SetSpeed(v) Player.Character.Humanoid.WalkSpeed = v end
-NewButton(pgChar, "Velocidade Rápida (100)", function() SetSpeed(100) end)
-NewButton(pgChar, "Pulo Alto (150)", function() Player.Character.Humanoid.JumpPower = 150 end)
-
--- LÓGICA: ABA FARM (AQUI É ONDE O JOGO FUNCIONA)
-NewToggle(pgFarm, "Auto Farm Mobs", "AutoFarm", function(v) end)
-NewToggle(pgFarm, "Auto Attack", "AutoAttack", function(v) end)
-
--- LÓGICA: ABA ESP
-NewToggle(pgEsp, "Ver Frutas no Mapa", "FruitEsp", function(v) end)
-NewButton(pgEsp, "Teleportar para Fruta", function()
-    for _, v in pairs(workspace:GetChildren()) do
-        if v:IsA("Tool") and (v.Name:find("Fruit") or v.Name:find("Fruta")) then
-            Player.Character.HumanoidRootPart.CFrame = v.Handle.CFrame
-            return
-        end
-    end
-end)
-
--- LÓGICA: ABA OUTROS
-NewButton(pgMisc, "Reconectar Servidor", function() 
-    game:GetService("TeleportService"):Teleport(game.PlaceId, Player) 
-end)
-NewButton(pgMisc, "Trocar de Servidor (Hop)", function()
-    local Http = game:GetService("HttpService")
-    local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-    local Servers = Http:JSONDecode(game:HttpGet(Api))
-    for _, s in pairs(Servers.data) do
-        if s.playing < s.maxPlayers and s.id ~= game.JobId then
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, s.id)
-        end
-    end
-end)
-
----------------------------------------------------------
--- LOOP DE FUNCIONAMENTO (BACKEND)
----------------------------------------------------------
-
-RunService.Stepped:Connect(function()
-    -- NoClip
-    if _G.Config.NoClip and Player.Character then
-        for _, part in pairs(Player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-    
-    -- Auto Farm Logic
-    if _G.Config.AutoFarm then
-        pcall(function()
-            local Target = nil
-            local Dist = math.huge
-            
-            -- Busca inimigos nas pastas comuns do Blox Fruits
-            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                    local d = (enemy.HumanoidRootPart.Position - Player.Character.HumanoidRootPart.Position).Magnitude
-                    if d < Dist then
-                        Dist = d
-                        Target = enemy
-                    end
-                end
+----------------------------------------------------------------------------------
+-- ABA 1: COMBATE (AUTO FARM COMPLETO)
+----------------------------------------------------------------------------------
+local function GetNearestEnemy()
+    local target = nil
+    local dist = math.huge
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+            local d = (v.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+            if d < dist then
+                dist = d
+                target = v
             end
-            
-            if Target then
-                -- Teleporta para CIMA do mob para não levar dano
-                Player.Character.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
-                -- Simula Clique
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton1(Vector2.new(851, 158))
-            end
+        end
+    end
+    return target
+end
+
+NewToggle(TabCombate, "Auto Farm (Melhor Mob)", "AutoFarm", function() end)
+NewToggle(TabCombate, "Auto Missões (Quest)", "AutoQuest", function() end)
+NewToggle(TabCombate, "Fast Attack (X10)", "FastAttack", function() end)
+NewToggle(TabCombate, "Auto Coletar Itens", "AutoCollect", function() end)
+NewSlider(TabCombate, "Distância do Farm", 1, 50, 20, function(v) Flags.FarmDist = v end)
+NewToggle(TabCombate, "Auto Haki (Buso)", "AutoHaki", function() end)
+NewToggle(TabCombate, "Anti-Stun (Funcional)", "AntiStun", function() end)
+NewToggle(TabCombate, "Infinite Jump", "InfJump", function() end)
+
+----------------------------------------------------------------------------------
+-- ABA 2: SERVIDOR & MOBILIDADE
+----------------------------------------------------------------------------------
+NewToggle(TabMobility, "Voo (Fly Mode)", "Fly", function() end)
+NewToggle(TabMobility, "No Clip (Atravessar)", "NoClip", function() end)
+NewSlider(TabMobility, "WalkSpeed", 16, 250, 16, function(v) Humanoid.WalkSpeed = v end)
+NewSlider(TabMobility, "JumpPower", 50, 500, 50, function(v) Humanoid.JumpPower = v end)
+NewToggle(TabMobility, "Anti-Kick (Metatable)", "AntiKick", function(v)
+    if v then
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+        local old = mt.__namecall
+        mt.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            if method == "Kick" then return nil end
+            return old(self, ...)
         end)
     end
-    
-    -- Fly Logic
-    if _G.Config.Fly then
-        Player.Character.HumanoidRootPart.Velocity = Vector3.new(0, 1, 0)
-    end
 end)
+NewToggle(TabMobility, "Remover Nevoeiro", "NoFog", function(v) Lighting.FogEnd = v and 999999 or 2000 end)
 
--- ESP de Frutas
+----------------------------------------------------------------------------------
+-- ABA 3: ESP & VISUAL
+----------------------------------------------------------------------------------
+NewToggle(TabESP, "ESP Jogadores", "ESP_Players", function() end)
+NewToggle(TabESP, "ESP Frutas", "ESP_Fruits", function() end)
+NewToggle(TabESP, "ESP Baús", "ESP_Chests", function() end)
+NewSlider(TabESP, "Range ESP", 100, 5000, 1000, function(v) Flags.ESPRange = v end)
+
+----------------------------------------------------------------------------------
+-- ABA 4: FRUTAS & TELEPORTE
+----------------------------------------------------------------------------------
+NewToggle(TabFruits, "Fruit Sniper (Auto Pick)", "FruitSniper", function() end)
+NewToggle(TabFruits, "Notificador de Frutas", "FruitNotifer", function() end)
+
+local Islands = {
+    ["Sea 1 - Jungle"] = CFrame.new(-1612, 36, 147),
+    ["Sea 1 - Pirate Village"] = CFrame.new(-1146, 4, 3827),
+    ["Sea 1 - Marineford"] = CFrame.new(-5036, 28, 4322)
+}
+
+local function Teleport(cf)
+    TweenService:Create(HumanoidRootPart, TweenInfo.new((cf.Position - HumanoidRootPart.Position).Magnitude/300), {CFrame = cf}):Play()
+end
+
+NewToggle(TabFruits, "TP: Jungle", "TPJungle", function(v) if v then Teleport(Islands["Sea 1 - Jungle"]) end end)
+NewToggle(TabFruits, "TP: Marineford", "TPMarine", function(v) if v then Teleport(Islands["Sea 1 - Marineford"]) end end)
+
+----------------------------------------------------------------------------------
+-- [ LOOPS DE FUNCIONAMENTO ]
+----------------------------------------------------------------------------------
+
+-- Loop de Auto Farm
 task.spawn(function()
-    while task.wait(2) do
-        if _G.Config.FruitEsp then
-            for _, v in pairs(workspace:GetChildren()) do
-                if v:IsA("Tool") and (v.Name:find("Fruit") or v.Name:find("Fruta")) then
-                    if not v:FindFirstChild("BoxESP") then
-                        local b = Instance.new("BoxHandleAdornment", v)
-                        b.Name = "BoxESP"
-                        b.Size = Vector3.new(4,4,4)
-                        b.AlwaysOnTop = true
-                        b.ZIndex = 10
-                        b.Adornee = v:FindFirstChild("Handle")
-                        b.Color3 = Color3.new(1, 0, 0)
-                        b.Transparency = 0.5
+    while task.wait() do
+        if Flags.AutoFarm then
+            local enemy = GetNearestEnemy()
+            if enemy and enemy:FindFirstChild("HumanoidRootPart") then
+                -- Posicionamento
+                HumanoidRootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, Flags.FarmDist or 20, 0)
+                
+                -- Fast Attack
+                if Flags.FastAttack then
+                    local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        tool:Activate()
+                        -- Remotes do Blox Fruits costumam requerer disparos repetidos
+                        game:GetService("ReplicatedStorage").Remotes.Validator:FireServer(math.random(1,9999))
                     end
                 end
             end
@@ -298,4 +335,66 @@ task.spawn(function()
     end
 end)
 
-print("Script Blox Fruits Ativado!")
+-- Loop de Anti-AFK
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new(0,0))
+end)
+
+-- Loop ESP (Otimizado)
+RunService.RenderStepped:Connect(function()
+    if Flags.ESP_Fruits then
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Tool") and v.Name:find("Fruit") then
+                if not v:FindFirstChild("Highlight") then
+                    local h = Instance.new("Highlight", v)
+                    h.FillColor = Colors.Success
+                end
+            end
+        end
+    end
+end)
+
+-- Fly Logic
+local flyVelocity
+RunService.Heartbeat:Connect(function()
+    if Flags.Fly then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        if not flyVelocity then
+            flyVelocity = Instance.new("BodyVelocity", HumanoidRootPart)
+            flyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        end
+        local dir = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + workspace.CurrentCamera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - workspace.CurrentCamera.CFrame.LookVector end
+        flyVelocity.Velocity = dir * 100
+    else
+        if flyVelocity then flyVelocity:Destroy() flyVelocity = nil end
+    end
+    
+    if Flags.NoClip then
+        for _, v in pairs(Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+
+-- Anti-Stun
+Humanoid.StateChanged:Connect(function(_, state)
+    if Flags.AntiStun and (state == Enum.HumanoidStateType.StrafingNoPhysics or state == Enum.HumanoidStateType.FallingDown) then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end
+end)
+
+-- Fruit Sniper (TP automático para fruta que spawnar)
+workspace.ChildAdded:Connect(function(child)
+    if Flags.FruitSniper and child:IsA("Tool") and child.Name:find("Fruit") then
+        Teleport(child.Handle.CFrame)
+        fireclickdetector(child:FindFirstChildOfClass("ClickDetector")) -- Se houver
+    end
+end)
+
+-- Inicialização final
+Pages["Combate"].Visible = true
+print("BLOX FRUITS HUB CARREGADO COM SUCESSO!")
